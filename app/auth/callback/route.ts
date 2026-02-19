@@ -5,10 +5,7 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
 
-  // Redirect to dashboard after login
-  const response = NextResponse.redirect(
-    new URL("/dashboard", request.url)
-  );
+  const response = NextResponse.next();
 
   if (code) {
     const supabase = createServerClient(
@@ -26,9 +23,31 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    // 🔥 This is critical
+    // Exchange code for session
     await supabase.auth.exchangeCodeForSession(code);
+
+    // Get user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    // Check if profile exists
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!profile) {
+      return NextResponse.redirect(new URL("/onboarding", request.url));
+    }
+
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  return response;
+  return NextResponse.redirect(new URL("/", request.url));
 }

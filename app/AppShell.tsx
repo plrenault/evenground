@@ -84,19 +84,20 @@ export default function AppShell({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 p-6 flex flex-col justify-between">
+
+      {/* Sidebar (Desktop Only) */}
+      <div className="hidden md:flex w-64 bg-white border-r border-gray-200 p-6 flex-col justify-between">
         <div>
           <div className="text-xl font-semibold mb-8">
             EvenGround
           </div>
 
-         <nav className="space-y-2 mb-8">
-  {navItem("/", "Home")}
-  {navItem("/dashboard", "Dashboard")}
-  {navItem("/requests", "All Requests")}
-  {navItem("/requests/pending", "Pending")}
-</nav>
+          <nav className="space-y-2 mb-8">
+            {navItem("/", "Home")}
+            {navItem("/dashboard", "Dashboard")}
+            {navItem("/requests", "All Requests")}
+            {navItem("/requests/pending", "Pending")}
+          </nav>
 
           <button
             onClick={() => setShowForm(true)}
@@ -112,7 +113,21 @@ export default function AppShell({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-10">{children}</div>
+      <div className="flex-1 p-6 sm:p-8 md:p-10">
+        
+        {/* Mobile Header */}
+        <div className="md:hidden mb-6 flex justify-between items-center">
+          <div className="text-lg font-semibold">EvenGround</div>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-black text-white text-xs px-3 py-2 rounded-lg"
+          >
+            + Request
+          </button>
+        </div>
+
+        {children}
+      </div>
 
       {/* Slide Over */}
       {showForm && (
@@ -123,7 +138,6 @@ export default function AppShell({
               Create New Request
             </h2>
 
-            {/* 🔥 DROPDOWN FIX */}
             <select
               className="w-full border border-gray-300 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
               value={type}

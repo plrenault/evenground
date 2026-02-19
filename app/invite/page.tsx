@@ -1,4 +1,3 @@
-export const dynamic = "force-dynamic";
 "use client";
 
 import { useEffect, useState } from "react";
@@ -25,11 +24,10 @@ export default function InviteHandler() {
       const user = userData.user;
 
       if (!user) {
-        router.push("/");
+        router.push("/login");
         return;
       }
 
-      // Get invite
       const { data: invite } = await supabase
         .from("family_invites")
         .select("*")
@@ -42,13 +40,11 @@ export default function InviteHandler() {
         return;
       }
 
-      // Attach user to family
       await supabase.from("family_members").insert({
         family_id: invite.family_id,
         user_id: user.id,
       });
 
-      // Mark invite accepted
       await supabase
         .from("family_invites")
         .update({ status: "accepted" })
@@ -63,7 +59,7 @@ export default function InviteHandler() {
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">
-        {loading ? <p>{message}</p> : <p>{message}</p>}
+        <p>{message}</p>
       </div>
     </div>
   );

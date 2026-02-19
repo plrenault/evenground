@@ -20,6 +20,7 @@ export default function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const isLanding = pathname === "/";
 
   const [showForm, setShowForm] = useState(false);
   const [type, setType] = useState("");
@@ -82,6 +83,16 @@ export default function AppShell({
     router.refresh();
   };
 
+  // 🟢 LANDING PAGE — no app chrome
+  if (isLanding) {
+    return (
+      <div className="min-h-screen bg-white text-gray-900">
+        {children}
+      </div>
+    );
+  }
+
+  // 🟢 APP LAYOUT
   return (
     <div className="flex min-h-screen bg-gray-50">
 
@@ -114,10 +125,12 @@ export default function AppShell({
 
       {/* Main Content */}
       <div className="flex-1 p-6 sm:p-8 md:p-10">
-        
+
         {/* Mobile Header */}
         <div className="md:hidden mb-6 flex justify-between items-center">
-          <div className="text-lg font-semibold">EvenGround</div>
+          <div className="text-lg font-semibold">
+            EvenGround
+          </div>
           <button
             onClick={() => setShowForm(true)}
             className="bg-black text-white text-xs px-3 py-2 rounded-lg"

@@ -5,7 +5,10 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
 
-  const response = NextResponse.redirect(new URL("/", request.url));
+  // Redirect to dashboard after login
+  const response = NextResponse.redirect(
+    new URL("/dashboard", request.url)
+  );
 
   if (code) {
     const supabase = createServerClient(
@@ -23,6 +26,7 @@ export async function GET(request: NextRequest) {
       }
     );
 
+    // 🔥 This is critical
     await supabase.auth.exchangeCodeForSession(code);
   }
 

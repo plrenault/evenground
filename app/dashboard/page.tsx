@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 export default async function DashboardPage() {
-  const cookieStore = cookies();
+  // 🔥 Await cookies in Next 15+
+  const cookieStore = await cookies();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

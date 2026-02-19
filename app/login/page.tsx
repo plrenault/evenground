@@ -16,7 +16,9 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // ✅ Hard-set production redirect
+        emailRedirectTo:
+          "https://evenground-zeta.vercel.app/auth/callback",
       },
     });
 
@@ -30,28 +32,37 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <form onSubmit={handleLogin} className="flex flex-col gap-4 w-80">
-        <h1 className="text-xl font-semibold">Login</h1>
+    <div className="flex min-h-screen items-center justify-center px-4">
+      <form
+        onSubmit={handleLogin}
+        className="flex flex-col gap-4 w-full max-w-sm bg-white p-6 rounded-xl shadow-sm"
+      >
+        <h1 className="text-xl font-semibold text-center">
+          Login to EvenGround
+        </h1>
 
         <input
           type="email"
           placeholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="border p-2 rounded"
+          className="border p-2 rounded-md w-full"
           required
         />
 
         <button
           type="submit"
           disabled={loading}
-          className="bg-black text-white p-2 rounded"
+          className="bg-black text-white p-2 rounded-md w-full disabled:opacity-50"
         >
           {loading ? "Sending..." : "Send Magic Link"}
         </button>
 
-        {message && <p className="text-sm">{message}</p>}
+        {message && (
+          <p className="text-sm text-center text-gray-600">
+            {message}
+          </p>
+        )}
       </form>
     </div>
   );

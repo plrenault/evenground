@@ -1,37 +1,50 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+"use client";
 
-export default async function DashboardPage() {
-  // 🔥 Await cookies in Next 15+
-  const cookieStore = await cookies();
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: () => {},
-      },
-    }
-  );
+export default function DashboardPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  useEffect(() => {
+    const checkUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-  if (!session) {
-    redirect("/login");
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      const { data: membership } = await supabase
+        .from("family_members")
+        .select("family_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (!membership) {
+        router.push("/onboarding");
+      } else {
+        setLoading(false);
+      }
+    };
+
+    checkUser();
+  }, [router]);
+
+  if (loading) {
+    return <div className="p-6">Loading...</div>;
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold">Dashboard</h1>
-
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <p className="text-sm text-gray-600">You are logged in.</p>
-      </div>
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold mb-4">
+        Dashboard
+      </h1>
+      <p>You are inside your family.</p>
     </div>
   );
 }

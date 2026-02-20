@@ -4,7 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
+export default function SignUpPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -12,12 +12,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
     });
@@ -25,20 +25,20 @@ export default function LoginPage() {
     if (error) {
       setMessage(error.message);
     } else {
-      router.push("/dashboard");
+      router.push("/onboarding");
     }
 
     setLoading(false);
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-screen items-center justify-center px-4 bg-gray-50">
       <form
-        onSubmit={handleLogin}
+        onSubmit={handleSignUp}
         className="flex flex-col gap-4 w-full max-w-sm bg-white p-6 rounded-xl shadow-sm"
       >
         <h1 className="text-xl font-semibold text-center">
-          Login to EvenGround
+          Create Account
         </h1>
 
         <input
@@ -46,7 +46,7 @@ export default function LoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="border p-2 rounded-md"
+          className="border p-2 rounded-md w-full"
           required
         />
 
@@ -55,16 +55,16 @@ export default function LoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="border p-2 rounded-md"
+          className="border p-2 rounded-md w-full"
           required
         />
 
         <button
           type="submit"
           disabled={loading}
-          className="bg-black text-white p-2 rounded-md disabled:opacity-50"
+          className="bg-black text-white p-2 rounded-md w-full disabled:opacity-50"
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading ? "Creating..." : "Sign Up"}
         </button>
 
         {message && (
@@ -72,6 +72,13 @@ export default function LoginPage() {
             {message}
           </p>
         )}
+
+        <p className="text-sm text-center text-gray-600">
+          Already have an account?{" "}
+          <a href="/login" className="underline">
+            Login
+          </a>
+        </p>
       </form>
     </div>
   );

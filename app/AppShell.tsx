@@ -27,6 +27,13 @@ export default function AppShell({
   const [details, setDetails] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // ✅ Hard logout
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.replace("/login"); // replace prevents back nav issues
+  };
 
   const navItem = (href: string, label: string) => {
     const active = pathname === href;
@@ -48,55 +55,76 @@ export default function AppShell({
   const createRequest = async () => {
     if (!type || !startDate) return;
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    setLoading(true);
 
-    if (!session) return;
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    const userId = session.user.id;
+      if (!session) {
+        console.error("No session");
+        return;
+      }
 
-    const { data: membership } = await supabase
-      .from("family_members")
-      .select("family_id")
-      .eq("user_id", userId)
-      .maybeSingle();
+      const userId = session.user.id;
 
-    if (!membership) return;
+      const { data: membership, error: membershipError } = await supabase
+        .from("family_members")
+        .select("family_id")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    await supabase.from("requests").insert({
-      family_id: membership.family_id,
-      requested_by_user_id: userId,
-      type,
-      details: details || null,
-      status: "pending",
-      start_date: startDate,
-      end_date: endDate || null,
-    });
+      if (membershipError) {
+        console.error("Membership error:", membershipError);
+        return;
+      }
 
-    setType("");
-    setDetails("");
-    setStartDate("");
-    setEndDate("");
-    setShowForm(false);
+      if (!membership) {
+        console.error("No family membership found");
+        return;
+      }
 
-    router.refresh();
+      const { error: insertError } = await supabase.from("requests").insert({
+        family_id: membership.family_id,
+        requested_by_user_id: userId,
+        type,
+        details: details || null,
+        status: "pending",
+        start_date: startDate,
+        end_date: endDate || null,
+      });
+
+      if (insertError) {
+        console.error("Request insert error:", insertError);
+        return;
+      }
+
+      // Reset form
+      setType("");
+      setDetails("");
+      setStartDate("");
+      setEndDate("");
+      setShowForm(false);
+
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // 🟢 LANDING PAGE — no app chrome
+  // Landing page (no sidebar)
   if (isLanding) {
     return (
-      <div className="min-h-screen bg-white text-gray-900">
+      <div className="min-h-screen bg-white">
         {children}
       </div>
     );
   }
 
-  // 🟢 APP LAYOUT
   return (
     <div className="flex min-h-screen bg-gray-50">
-
-      {/* Sidebar (Desktop Only) */}
+      {/* Sidebar Desktop */}
       <div className="hidden md:flex w-64 bg-white border-r border-gray-200 p-6 flex-col justify-between">
         <div>
           <div className="text-xl font-semibold mb-8">
@@ -104,7 +132,6 @@ export default function AppShell({
           </div>
 
           <nav className="space-y-2 mb-8">
-            {navItem("/", "Home")}
             {navItem("/dashboard", "Dashboard")}
             {navItem("/requests", "All Requests")}
             {navItem("/requests/pending", "Pending")}
@@ -112,31 +139,49 @@ export default function AppShell({
 
           <button
             onClick={() => setShowForm(true)}
-            className="w-full bg-black text-white text-sm px-4 py-2 rounded-lg hover:opacity-90 transition"
+            className="w-full bg-black text-white text-sm px-4 py-2 rounded-lg"
           >
             + New Request
           </button>
         </div>
 
-        <div className="text-xs text-gray-400">
-          Calm. Structured. Neutral.
+        <div className="space-y-3">
+          <button
+            onClick={handleLogout}
+            className="w-full border border-gray-300 text-sm px-4 py-2 rounded-lg hover:bg-gray-100"
+          >
+            Logout
+          </button>
+
+          <div className="text-xs text-gray-400 text-center">
+            Calm. Structured. Neutral.
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 p-6 sm:p-8 md:p-10">
-
         {/* Mobile Header */}
         <div className="md:hidden mb-6 flex justify-between items-center">
           <div className="text-lg font-semibold">
             EvenGround
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="bg-black text-white text-xs px-3 py-2 rounded-lg"
-          >
-            + Request
-          </button>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-black text-white text-xs px-3 py-2 rounded-lg"
+            >
+              + Request
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="border border-gray-300 text-xs px-3 py-2 rounded-lg"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         {children}
@@ -146,13 +191,12 @@ export default function AppShell({
       {showForm && (
         <div className="fixed inset-0 bg-black/30 flex justify-end">
           <div className="w-full max-w-md bg-white p-8 shadow-xl space-y-5">
-
             <h2 className="text-lg font-semibold">
               Create New Request
             </h2>
 
             <select
-              className="w-full border border-gray-300 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              className="w-full border border-gray-300 p-2 rounded-lg text-sm"
               value={type}
               onChange={(e) => setType(e.target.value)}
             >
@@ -165,7 +209,7 @@ export default function AppShell({
             </select>
 
             <textarea
-              className="w-full border border-gray-300 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              className="w-full border border-gray-300 p-2 rounded-lg text-sm"
               placeholder="Details"
               rows={3}
               value={details}
@@ -174,14 +218,14 @@ export default function AppShell({
 
             <input
               type="date"
-              className="w-full border border-gray-300 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              className="w-full border border-gray-300 p-2 rounded-lg text-sm"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
 
             <input
               type="date"
-              className="w-full border border-gray-300 p-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              className="w-full border border-gray-300 p-2 rounded-lg text-sm"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
             />
@@ -189,20 +233,19 @@ export default function AppShell({
             <div className="flex justify-end gap-3 pt-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition"
+                className="px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-lg text-sm"
               >
                 Cancel
               </button>
 
               <button
                 onClick={createRequest}
-                disabled={!type || !startDate}
-                className="px-4 py-2 bg-black text-white rounded-lg text-sm hover:opacity-90 transition disabled:opacity-50"
+                disabled={!type || !startDate || loading}
+                className="px-4 py-2 bg-black text-white rounded-lg text-sm disabled:opacity-50"
               >
-                Create
+                {loading ? "Creating..." : "Create"}
               </button>
             </div>
-
           </div>
         </div>
       )}

@@ -13,6 +13,11 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
+  const displayName =
+    user.user_metadata?.full_name ||
+    user.email?.split("@")[0] ||
+    "Parent";
+
   // 2️⃣ Get family membership
   const { data: membership } = await supabase
     .from("family_members")
@@ -70,7 +75,15 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6 space-y-10">
-      <h1 className="text-2xl font-semibold">Dashboard</h1>
+      {/* 👋 Greeting */}
+      <div>
+        <h1 className="text-2xl font-semibold">
+          Hello {displayName}
+        </h1>
+        <p className="text-sm text-gray-600 mt-1">
+          Today is a good day to keep things clear and focused.
+        </p>
+      </div>
 
       {/* 🔥 Section 1 — Needs Your Approval */}
       <section>
@@ -87,7 +100,7 @@ export default async function DashboardPage() {
             {pending.map((req) => (
               <div
                 key={req.id}
-                className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition"
               >
                 <div className="font-medium capitalize">
                   {req.type}

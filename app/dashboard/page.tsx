@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { createServerClient } from "@/lib/supabase-server";
+import { createSupabaseServerClient } from "@/lib/supabase-server";
 
 export default async function DashboardPage() {
-  const supabase = createServerClient();
+  const supabase = createSupabaseServerClient();
 
   // 1️⃣ Get current user
   const {

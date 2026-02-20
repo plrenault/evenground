@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const inviteLink = `https://evenground-zeta.vercel.app/signup?token=${token}`;
+    const inviteLink = `${process.env.NEXT_PUBLIC_SITE_URL}/signup?token=${token}`;
 
     const { error } = await resend.emails.send({
       from: "EvenGround <onboarding@resend.dev>",

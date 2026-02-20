@@ -29,10 +29,9 @@ export default function AppShell({
   const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ Hard logout
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.replace("/login"); // replace prevents back nav issues
+    router.replace("/login");
   };
 
   const navItem = (href: string, label: string) => {
@@ -62,30 +61,19 @@ export default function AppShell({
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
-        console.error("No session");
-        return;
-      }
+      if (!session) return;
 
       const userId = session.user.id;
 
-      const { data: membership, error: membershipError } = await supabase
+      const { data: membership } = await supabase
         .from("family_members")
         .select("family_id")
         .eq("user_id", userId)
         .maybeSingle();
 
-      if (membershipError) {
-        console.error("Membership error:", membershipError);
-        return;
-      }
+      if (!membership) return;
 
-      if (!membership) {
-        console.error("No family membership found");
-        return;
-      }
-
-      const { error: insertError } = await supabase.from("requests").insert({
+      await supabase.from("requests").insert({
         family_id: membership.family_id,
         requested_by_user_id: userId,
         type,
@@ -95,12 +83,6 @@ export default function AppShell({
         end_date: endDate || null,
       });
 
-      if (insertError) {
-        console.error("Request insert error:", insertError);
-        return;
-      }
-
-      // Reset form
       setType("");
       setDetails("");
       setStartDate("");
@@ -113,7 +95,7 @@ export default function AppShell({
     }
   };
 
-  // Landing page (no sidebar)
+  // Landing page only
   if (isLanding) {
     return (
       <div className="min-h-screen bg-white">
@@ -124,6 +106,7 @@ export default function AppShell({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
+
       {/* Sidebar Desktop */}
       <div className="hidden md:flex w-64 bg-white border-r border-gray-200 p-6 flex-col justify-between">
         <div>
@@ -160,7 +143,8 @@ export default function AppShell({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-6 sm:p-8 md:p-10">
+      <div className="flex-1 p-6 sm:p-8 md:p-10 pb-24 md:pb-10">
+
         {/* Mobile Header */}
         <div className="md:hidden mb-6 flex justify-between items-center">
           <div className="text-lg font-semibold">
@@ -249,6 +233,43 @@ export default function AppShell({
           </div>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-3 z-50">
+        <Link
+          href="/dashboard"
+          className={`text-sm ${
+            pathname === "/dashboard"
+              ? "text-black font-semibold"
+              : "text-gray-500"
+          }`}
+        >
+          Dashboard
+        </Link>
+
+        <Link
+          href="/requests"
+          className={`text-sm ${
+            pathname === "/requests"
+              ? "text-black font-semibold"
+              : "text-gray-500"
+          }`}
+        >
+          Requests
+        </Link>
+
+        <Link
+          href="/requests/pending"
+          className={`text-sm ${
+            pathname === "/requests/pending"
+              ? "text-black font-semibold"
+              : "text-gray-500"
+          }`}
+        >
+          Pending
+        </Link>
+      </div>
+
     </div>
   );
 }

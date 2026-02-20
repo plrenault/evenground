@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,14 +19,70 @@ export default function SignUpPage() {
     setLoading(true);
     setMessage("");
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
 
     if (error) {
       setMessage(error.message);
-    } else {
+      setLoading(false);
+      return;
+    }
+
+    // If no invite token → normal onboarding flow
+    if (!token) {
+      router.push("/onboarding");
+      return;
+    }
+
+    // If token exists → attach to family
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      // Look up invite
+      const { data: invite, error: inviteError } = await supabase
+        .from("family_invites")
+        .select("*")
+        .eq("token", token)
+        .maybeSingle();
+
+      if (inviteError || !invite) {
+        console.error("Invite lookup failed", inviteError);
+        router.push("/onboarding");
+        return;
+      }
+
+      // Attach to family
+      const { error: memberError } = await supabase
+        .from("family_members")
+        .insert({
+          family_id: invite.family_id,
+          user_id: user.id,
+        });
+
+      if (memberError) {
+        console.error("Member attach failed", memberError);
+        router.push("/onboarding");
+        return;
+      }
+
+      // Mark invite accepted
+      await supabase
+        .from("family_invites")
+        .update({ status: "accepted" })
+        .eq("id", invite.id);
+
+      router.push("/dashboard");
+    } catch (err) {
+      console.error(err);
       router.push("/onboarding");
     }
 

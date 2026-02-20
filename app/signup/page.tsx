@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+export const dynamic = "force-dynamic";
+
+import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -31,7 +33,12 @@ export default function SignUpPage() {
     }
 
     const user = data.user;
-    if (!user) return;
+
+    if (!user) {
+      setMessage("Signup succeeded but user not returned.");
+      setLoading(false);
+      return;
+    }
 
     // 🔥 HANDLE INVITE TOKEN
     if (token) {
@@ -39,17 +46,24 @@ export default function SignUpPage() {
         .from("family_invites")
         .select("*")
         .eq("token", token)
+        .eq("status", "pending")
         .single();
 
       if (inviteError || !invite) {
         console.error("Invite not found", inviteError);
       } else {
         // Attach user to family
-        await supabase.from("family_members").insert({
-          family_id: invite.family_id,
-          user_id: user.id,
-          role: "parent",
-        });
+        const { error: memberError } = await supabase
+          .from("family_members")
+          .insert({
+            family_id: invite.family_id,
+            user_id: user.id,
+            role: "parent",
+          });
+
+        if (memberError) {
+          console.error("Error inserting family member:", memberError);
+        }
 
         // Mark invite accepted
         await supabase

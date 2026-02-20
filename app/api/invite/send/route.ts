@@ -13,7 +13,12 @@ export async function POST(req: Request) {
       );
     }
 
-    const inviteLink = `${process.env.NEXT_PUBLIC_SITE_URL}/signup?token=${token}`;
+    // Use environment variable with fallback safety
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "https://evenground-zeta.vercel.app";
+
+    const inviteLink = `${baseUrl}/signup?token=${token}`;
 
     const { error } = await resend.emails.send({
       from: "EvenGround <onboarding@resend.dev>",

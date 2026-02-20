@@ -19,70 +19,59 @@ export default function OnboardingPage() {
 
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser();
 
-    if (!user) {
+    if (userError || !user) {
       router.push("/login");
       return;
     }
 
     try {
-      // 1️⃣ Create family
-      const { error: familyInsertError } = await supabase
+      // 1️⃣ Create family (no created_by column anymore)
+      const { data: family, error: familyInsertError } = await supabase
         .from("families")
-        .insert({
-          created_by: user.id,
-        });
+        .insert({})
+        .select()
+        .single();
 
-      if (familyInsertError) {
-        console.error(familyInsertError);
+      if (familyInsertError || !family) {
+        console.error("Family insert error:", familyInsertError);
         setError("Could not create family.");
         return;
       }
 
-      // 2️⃣ Fetch family
-      const { data: createdFamily, error: fetchError } = await supabase
-        .from("families")
-        .select("id")
-        .eq("created_by", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (fetchError || !createdFamily) {
-        console.error(fetchError);
-        setError("Could not retrieve family.");
-        return;
-      }
-
-      // 3️⃣ Add membership
+      // 2️⃣ Attach founder to family
       const { error: memberError } = await supabase
         .from("family_members")
         .insert({
-          family_id: createdFamily.id,
+          family_id: family.id,
           user_id: user.id,
+          role: "parent",
         });
 
       if (memberError) {
-        console.error(memberError);
+        console.error("Member insert error:", memberError);
         setError("Could not attach you to family.");
         return;
       }
 
-      // 4️⃣ Create invite + send email
+      // 3️⃣ Create invite + send email
       if (coparentEmail) {
         const inviteToken = crypto.randomUUID();
 
         const { error: inviteError } = await supabase
           .from("family_invites")
           .insert({
-            family_id: createdFamily.id,
+            family_id: family.id,
             email: coparentEmail,
             status: "pending",
             token: inviteToken,
           });
 
-        if (!inviteError) {
+        if (inviteError) {
+          console.error("Invite insert error:", inviteError);
+        } else {
           await fetch("/api/invite/send", {
             method: "POST",
             headers: {
@@ -93,14 +82,12 @@ export default function OnboardingPage() {
               token: inviteToken,
             }),
           });
-        } else {
-          console.error(inviteError);
         }
       }
 
       router.push("/dashboard");
     } catch (err) {
-      console.error(err);
+      console.error("Unexpected error:", err);
       setError("Something went wrong.");
     } finally {
       setLoading(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -30,59 +30,36 @@ export default function SignUpPage() {
       return;
     }
 
-    // If no invite token → normal onboarding flow
-    if (!token) {
-      router.push("/onboarding");
-      return;
-    }
+    const user = data.user;
+    if (!user) return;
 
-    // If token exists → attach to family
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push("/login");
-        return;
-      }
-
-      // Look up invite
+    // 🔥 HANDLE INVITE TOKEN
+    if (token) {
       const { data: invite, error: inviteError } = await supabase
         .from("family_invites")
         .select("*")
         .eq("token", token)
-        .maybeSingle();
+        .single();
 
       if (inviteError || !invite) {
-        console.error("Invite lookup failed", inviteError);
-        router.push("/onboarding");
-        return;
-      }
-
-      // Attach to family
-      const { error: memberError } = await supabase
-        .from("family_members")
-        .insert({
+        console.error("Invite not found", inviteError);
+      } else {
+        // Attach user to family
+        await supabase.from("family_members").insert({
           family_id: invite.family_id,
           user_id: user.id,
+          role: "parent",
         });
 
-      if (memberError) {
-        console.error("Member attach failed", memberError);
-        router.push("/onboarding");
-        return;
+        // Mark invite accepted
+        await supabase
+          .from("family_invites")
+          .update({ status: "accepted" })
+          .eq("id", invite.id);
       }
 
-      // Mark invite accepted
-      await supabase
-        .from("family_invites")
-        .update({ status: "accepted" })
-        .eq("id", invite.id);
-
       router.push("/dashboard");
-    } catch (err) {
-      console.error(err);
+    } else {
       router.push("/onboarding");
     }
 
@@ -130,13 +107,6 @@ export default function SignUpPage() {
             {message}
           </p>
         )}
-
-        <p className="text-sm text-center text-gray-600">
-          Already have an account?{" "}
-          <a href="/login" className="underline">
-            Login
-          </a>
-        </p>
       </form>
     </div>
   );

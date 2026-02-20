@@ -17,18 +17,23 @@ export default function OnboardingPage() {
     setLoading(true);
     setError("");
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      router.push("/login");
-      return;
-    }
-
     try {
-      // 1️⃣ Create family (no created_by column anymore)
+      // 🔐 Get session (more stable than getUser)
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+
+      if (sessionError || !sessionData.session) {
+        console.error("No active session:", sessionError);
+        setError("You must be logged in.");
+        router.push("/login");
+        return;
+      }
+
+      const user = sessionData.session.user;
+
+      console.log("Authenticated user:", user);
+
+      // 1️⃣ Create family
       const { data: family, error: familyInsertError } = await supabase
         .from("families")
         .insert({})
@@ -40,6 +45,8 @@ export default function OnboardingPage() {
         setError("Could not create family.");
         return;
       }
+
+      console.log("Created family:", family);
 
       // 2️⃣ Attach founder to family
       const { error: memberError } = await supabase
@@ -56,7 +63,9 @@ export default function OnboardingPage() {
         return;
       }
 
-      // 3️⃣ Create invite + send email
+      console.log("Attached founder to family.");
+
+      // 3️⃣ Create invite
       if (coparentEmail) {
         const inviteToken = crypto.randomUUID();
 
